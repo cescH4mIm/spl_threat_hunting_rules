@@ -9,10 +9,10 @@ ID 	Technique 	Tactic
 T1547.014 	Active Setup 	Persistence, Privilege Escalation
 T1547 	Boot or Logon Autostart Execution 	Persistence, Privilege Escalation
 
-This site was built using [GitHub Pages](https://pages.github.com/).
+
 Data required:
 
-    [Authentication data](https://lantern.splunk.com/Data_Descriptors/Authentication_data)
+    [Authentication data](https://lantern.splunk.com/Data_Descriptors/Authentication_data/)
     Binary repositories data
     Endpoint data
 spl:
