@@ -1,1 +1,36 @@
+resource: https://research.splunk.com/endpoint/98f22d82-9d62-11eb-9fcf-acde48001122/
 
+Windows Multiple Disabled Users Failed To Authenticate Wth Kerberos
+Description
+The following analytic identifies one source endpoint failing to authenticate with 30 unique disabled domain users using the Kerberos protocol within 5 minutes.
+Event 4768 is generated every time the Key Distribution Center issues a Kerberos Ticket Granting Ticket (TGT). Failure code 0x12 stands for clients credentials have been revoked (account disabled, expired or locked out).
+This detection will only trigger on domain controllers, not on member servers or workstations.
+The analytics returned fields allow analysts to investigate the event further by providing fields like source ip and attempted user accounts.
+ATT&CKPermalink
+ID 	Technique 	Tactic
+T1110.003 	Password Spraying 	Credential Access
+T1110 	Brute Force 	Credential Access
+
+​Data required:
+
+    Microsoft
+        Active Directory audit data
+        Windows event logs
+
+spl:
+============================================================================================
+`wineventlog_security` EventCode=4768 TargetUserName!=*$ Status=0x12 
+| bucket span=5m _time 
+| stats dc(TargetUserName) AS unique_accounts values(TargetUserName) as tried_accounts by _time, IpAddress 
+| where unique_accounts > 30 
+| `windows_multiple_disabled_users_failed_to_authenticate_wth_kerberos_filter`
+============================================================================================
+
+How To Implement:
+To successfully implement this search, you need to be ingesting Domain Controller and Kerberos events. The Advanced Security Audit policy setting Audit Kerberos Authentication Service within Account Logon needs to be enabled.
+
+Known False Positives:
+A host failing to authenticate with multiple disabled domain users is not a common behavior for legitimate systems. Possible false positive scenarios include but are not limited to vulnerability scanners, multi-user systems missconfigured systems.
+
+Reference:
+https://attack.mitre.org/techniques/T1110/003/
