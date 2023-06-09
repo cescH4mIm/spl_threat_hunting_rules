@@ -1,0 +1,35 @@
+resource:
+https://research.splunk.com/endpoint/f64579c0-203f-11ec-abcc-acde48001122/?_ga=2.34620001.1565245555.1686345577-200664223.1656358443&_gl=1*jaqyj3*_ga*MjAwNjY0MjIzLjE2NTYzNTg0NDM.*_ga_5EPM2P39FV*MTY4NjM0NTU4NS4xMTguMS4xNjg2MzQ1Njc3LjYwLjAuMA..
+
+Description:
+This analytic is to detect a suspicious modification of the active setup registry for persistence and privilege escalation. This technique was seen in several malware (poisonIvy), adware and APT to gain persistence to the compromised machine upon boot up. This TTP is a good indicator to further check the process id that do the modification since modification of this registry is not commonly done. check the legitimacy of the file and process involve in this rules to check if it is a valid setup installer that creating or modifying this registry.
+
+ATT&CK
+ID 	Technique 	Tactic
+T1547.014 	Active Setup 	Persistence, Privilege Escalation
+T1547 	Boot or Logon Autostart Execution 	Persistence, Privilege Escalation
+
+Data required:
+
+    Authentication data
+    Binary repositories data
+    Endpoint data
+spl:
+============================================================================================
+| tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Registry WHERE (Registry.registry_value_name= "StubPath" Registry.registry_path = "*\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components*") BY _time span=1h Registry.registry_path Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data Registry.process_guid 
+| `drop_dm_object_name(Registry)` 
+| `security_content_ctime(firstTime)` 
+| `security_content_ctime(lastTime)`
+| `active_setup_registry_autostart_filter`
+============================================================================================
+
+How To Implement:
+To successfully implement this search, you need to be ingesting logs with the registry value name, registry path, and registry value data from your endpoints. If you are using Sysmon, you must have at least version 2.0 of the offical Sysmon TA. https://splunkbase.splunk.com/app/5709
+
+Known False Positives:
+Active setup installer may add or modify this registry.
+
+Reference:
+
+    https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia-description?Name=Backdoor%3AWin32%2FPoisonivy.E
+    https://attack.mitre.org/techniques/T1547/014/
