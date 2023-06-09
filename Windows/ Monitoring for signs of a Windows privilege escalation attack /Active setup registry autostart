@@ -13,8 +13,9 @@ T1547 	Boot or Logon Autostart Execution 	Persistence, Privilege Escalation
 Data required:
 
     [Authentication data](https://lantern.splunk.com/Data_Descriptors/Authentication_data/)
-    Binary repositories data
-    Endpoint data
+    [Binary repositories data](https://lantern.splunk.com/Data_Descriptors/Binary_repositories_data)
+    [Endpoint data](https://lantern.splunk.com/Data_Descriptors/Endpoint_data)
+    
 spl:
 ============================================================================================
 | tstats `security_content_summariesonly` count FROM datamodel=Endpoint.Registry WHERE (Registry.registry_value_name= "StubPath" Registry.registry_path = "*\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components*") BY _time span=1h Registry.registry_path Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data Registry.process_guid 
