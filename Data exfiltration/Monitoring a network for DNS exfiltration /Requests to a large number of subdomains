@@ -1,0 +1,31 @@
+resource: https://lantern.splunk.com/Splunk_Platform/Use_Cases/Use_Cases_Security/Threat_Hunting/Monitoring_a_network_for_DNS_exfiltration/Requests_to_a_large_number_of_subdomains
+
+Description:
+You want to monitor how many subdomains are requested per domain to identify signs of data exfiltration or Domain Generation Algorithm domains.
+
+Required data:
+DNS data
+
+Procedure:
+Run the following search. You can optimize it by specifying an index and adjusting the time range.
+
+============================================================================================
+tag=dns message_type="Query" 
+| eval list="mozilla"
+| `ut_parse_extended(query, list)`
+| stats dc(ut_subdomain) AS HostsPerDomain BY ut_domain
+| sort -HostsPerDomain
+============================================================================================
+
+Search explanation:
+The table provides an explanation of what each part of this search achieves. You can adjust this query based on the specifics of your environment.
+
+tag=dns ->  Search for fields with the "web" tag.
+message_type="Query" -> Search for queries.
+| eval list="mozilla" ->  Search the Mozilla catalog for top level domains. #This eval function is required for the next line in the search (ut_parse_extended) to work.
+| `ut_parse_extended(query, list)`  ->  Parse the queries based on the Mozilla top level domain list.
+| stats dc(ut_subdomain) as HostsPerDomain by ut_domain ->  Return the results in a table—grouped by the ut_domain field—that includes a count of the number of distinct subdomains for each domain seen.
+| sort -HostsPerDomain  ->  Sort the results with the domain with the highest number of subdomains appearing first.
+
+Next steps:
+The search results include all domains. Since you probably aren't concerned about queries to subdomains of microsoft.com or other known good sites, you can use lookups to remove noise. 
