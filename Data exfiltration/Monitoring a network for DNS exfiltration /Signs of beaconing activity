@@ -1,0 +1,47 @@
+resource: https://lantern.splunk.com/Splunk_Platform/Use_Cases/Use_Cases_Security/Threat_Hunting/Monitoring_a_network_for_DNS_exfiltration/Signs_of_beaconing_activity
+
+Description:
+You want to monitor your network to see whether any hosts are beaconing—or checking in with—malicious command and control infrastructure.
+
+Required data:
+DNS data
+
+Procedure:
+Run the following search. You can optimize it by specifying an index and adjusting the time range. 
+
+============================================================================================
+eventtype="stream_dns" message_type="Query" 
+| fields _time, query
+| streamstats current=f last(_time) AS last_time BY query
+| eval gap=last_time - _time
+| stats count avg(gap) AS AverageBeaconTime var(gap) AS VarianceBeaconTime BY query
+| eval AverageBeaconTime=round(AverageBeaconTime,3), VarianceBeaconTime=round(VarianceBeaconTime,3)
+| sort -count
+| where VarianceBeaconTime < 60 AND count > 2 AND AverageBeaconTime>1.000
+| table query VarianceBeaconTime  count AverageBeaconTime
+============================================================================================
+
+Search explanation:
+The table provides an explanation of what each part of this search achieves. You can adjust this query based on the specifics of your environment.
+
+eventtype="stream_dns"  ->  Search only Stream DNS events.
+message_type="Query"  ->  Search for queries.
+| fields _time, query ->  Keep only the time and the query field to speed up the search.
+| streamstats current=f last(_time) AS last_time BY query ->  Stream the last time each query was seen for all preceding events (excluding the current event) and output as last_time, grouped by query.
+| eval gap=last_time - _time  ->  Calculate the gap between the last_time each query was seen and the current event.
+| stats count avg(gap) AS AverageBeaconTime var(gap) AS VarianceBeaconTime BY query ->  Calculate count for each query. For each query, also calculate the average gap and display it in an AverageBeaconTime column, and calculate the gap variance and display it in a VarianceBeaconTime column. 
+| eval AverageBeaconTime=round(AverageBeaconTime,3), VarianceBeaconTime=round(VarianceBeaconTime,3) ->  Round the AverageBeaconTime and VarianceBeaconTime results to three decimal places.
+| sort -count ->  Sort the results with the query with the highest occurrence appearing first.
+| where VarianceBeaconTime < 60 AND count > 2 AND AverageBeaconTime>1.000 ->  Filter results to display only results with a low variance relative to the other parameters. You can adjust these numbers according to baselines for your organization. 
+| table query VarianceBeaconTime  count AverageBeaconTime ->  Display the results in a table with columns in the order shown.
+
+Next steps:
+Low time variance in time in queries may indicate that hosts are contacting command and control infrastructure on a predetermined time slot. You might want to investigate activity on those hosts more closely. You can also add the src field to the | fields line of this search: 
+
+| fields _time, src, query
+
+and a distinct count to the | stats line
+
+| stats count dc(src) AS NumHosts avg(gap) AS AverageBeaconTime var(gap) AS VarianceBeaconTime BY query
+
+to see the number of distinct hosts engaging in the same beaconing behavior.
