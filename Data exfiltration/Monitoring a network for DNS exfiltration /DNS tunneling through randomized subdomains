@@ -1,0 +1,42 @@
+resource: https://lantern.splunk.com/Splunk_Platform/Use_Cases/Use_Cases_Security/Threat_Hunting/Monitoring_a_network_for_DNS_exfiltration/DNS_tunneling_through_randomized_subdomains
+
+Description:
+You hypothesize that an attacker is using the dnscat2 tool to exfiltrate data. This tool asks for a domain name that the attacker owns, and then encrypts, compresses, and chunks files. To exfiltrate, it passes stolen information into DNS queries to randomized subdomains. You want to see how many random subdomains are being requested on your network and what they look like to identify possible signs of attack. ​
+
+Required data
+DNS data
+
+Procedure:
+Run the following search. You can optimize it by specifying an index and adjusting the time range.  
+
+tip: 
+This sample search uses Zeek DNS data. You can replace this source with any other DNS data used in your organization. In addition, you must install the URL toolbox app for this search to work.
+
+Run the following search. You can optimize it by specifying an index and adjusting the time range. 
+
+============================================================================================
+sourcetype=bro_dns
+| `ut_parse(query)`
+| `ut_shannon(ut_subdomain)`
+| eval sublen=length(ut_subdomain)
+| stats count avg(ut_shannon) AS avg_sha avg(sublen) AS avg_sublen stdev(sublen) AS stdev_sublen BY ut_domain
+| search avg_sha>3 avg_sublen>20 stdev_sublen<2
+|eval subdomain_samples = mvindex(domain_samples, 1,5)
+|sort - count
+============================================================================================
+
+Search explanation:
+The table provides an explanation of what each part of this search achieves. You can adjust this query based on the specifics of your environment.
+
+sourcetype=bro_dns  ->  Search only Bro (Zeek) DNS data.
+| `ut_parse(query)` ->  Parse the DNS queries found in the data.
+| `ut_shannon(ut_subdomain)`  ->  Calculate the entropy score for each URL.
+| eval sublen=length(ut_subdomain)  ->  Create a sublen field, which is the length of each URL. 
+| stats count avg(ut_shannon) AS avg_sha avg(sublen) AS avg_sublen
+stdev(sublen) AS stdev_sublen BY ut_domain  ->  Count the number of times each domain appeared. Calculate the average Shannon entropy value for the subdomains from each domain and display it in a column called avg_sha. Calculate the average length for the subdomains from each domain and display it in a column called avg_sublen. Calculate the standard deviation for the length of each subdomain and display it in a column called stdev_sublen. Group the results by domain.
+| search avg_sha>3 avg_sublen>20 stdev_sublen<2 ->  Look for domains whose average entropy score is greater than 3, average length is greater than 20, and average standard deviation is less than 2.
+| eval subdomain_samples = mvindex(domain_samples, 1,5)  -> Return five domains for each multivalue domain_samples field, starting with the first one, and put them in a column called subdomain_samples.
+|sort - count ->  Sort the table with the most commonly occurring domain first.
+
+Next steps:
+In this type of attack, since the attacker owns the domain name and is listening for the requests, he can successfully capture and recreate the data on their server. No firewall holes are needed and next generation firewall detection is impossible because it appears to be DNS traffic from your DNS server. Investigate the subdomains this search reveals to find indicators of an attack.  
