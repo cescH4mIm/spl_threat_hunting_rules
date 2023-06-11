@@ -1,1 +1,31 @@
+resource: https://lantern.splunk.com/Splunk_Platform/Use_Cases/Use_Cases_Security/Threat_Hunting/Monitoring_a_network_for_DNS_exfiltration/Changes_in_DNS_record_type_queries
 
+Description:
+You want to monitor your network for changes in resource type behavior, which can be an early sign of data exfiltration.
+
+Required data:
+DNS data
+
+Procedure:
+Run the following search. You can optimize it by specifying an index and adjusting the time range. 
+
+spl:
+============================================================================================
+eventtype="stream_dns" message_type="Query" 
+| timechart span=1h count BY record_type
+============================================================================================
+
+Search explanation:
+The table provides an explanation of what each part of this search achieves. You can adjust this query based on the specifics of your environment.
+
+eventtype="stream_dns":
+  Search only Stream DNS events.
+  
+message_type="Query" :
+  Search for queries.
+
+| timechart span=1h count BY record_type:
+  Display a table that shows the types of DNS records accessed during one hour increments over the time span you set the search for. 
+
+Next steps:
+Examine the results for changes in types of records being queried. Both A records and TXT records should be observed carefully as these are commonly used in command and control or exfiltration activity. If you have already identified a suspicious IP address, you can add it to the search to see if it is correlated with the changes in record types queried. You can also use the results to build a baseline or set thresholds for alerts.
