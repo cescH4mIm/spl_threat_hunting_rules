@@ -1,0 +1,35 @@
+resource: https://lantern.splunk.com/Splunk_Platform/Use_Cases/Use_Cases_Security/Threat_Hunting/Monitoring_a_network_for_DNS_exfiltration/Increases_in_DNS_packet_size_and_volume
+
+Description:
+You want to monitor your network for large DNS packets or an unusually high volume of DNS packets, both of which can be an early sign of data exfiltration.
+
+Required data:
+DNS data
+
+Procedure:
+Run the following search. You can optimize it by specifying an index and adjusting the time range. 
+
+spl:
+============================================================================================
+eventtype="stream_dns" message_type="Query" 
+| mvexpand query
+| eval queryLength=len(query)
+| stats count BY queryLength, src
+| sort -queryLength, count
+| table src queryLength count
+| head 1000
+============================================================================================
+
+Search explanation:
+eventtype="stream_dns" -> Search only Stream DNS events.
+message_type="Query"   -> Search for queries.
+| mvexpand query -> Create a new event for each value found in the query field.
+| eval queryLength=len(query) -> Calculate the length of the string in the query field.
+| stats count BY queryLength, src -> Count the number of times each query length and source combination occurred.
+| sort -queryLength, count  ->  Sort results with the largest requests first.
+| table src queryLength count ->  Display the results in a table with columns in the order shown.
+| head 1000 ->  Show only the first 1,000 records.
+
+Next steps:
+Using the scatter chart visualization might help you see the outliers better. A high number of requests or large packets can indicate a security risk. For example, many common domains (www.google.com and www.bbc.co.uk) have a small query string length and will have a small query count. If, however, the malicious software opens a sensitive document that’s 5 Mb in size, chops it into 255-byte packets, and sends via DNS requests, then you're likely to see many 255-byte packets.
+
